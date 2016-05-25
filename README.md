@@ -28,8 +28,8 @@ kotori.require('jquery', function() {
     console.log($);
 });
 
-kotori.require('jquery', function() {
-    console.log('//cdn.bootcss.com/jquery/2.2.1/jquery.min.js');
+kotori.require('//cdn.bootcss.com/jquery/2.2.1/jquery.min.js', function() {
+    console.log($);
 });
 
 ```
