@@ -1,69 +1,126 @@
 (function(window, undefined) {
-    var Kotori = {
-        ajax: function(obj) {
-            var xhr = this.createXHR();
-            obj.url = obj.url + "?rand=" + Math.random();
-            obj.data = this.params(obj.data);
-            if (obj.method === "get") {
-                obj.url += obj.url.indexOf("?") == "-1" ? "?" + obj.data : "&" + obj.data;
+
+    var kotori = {
+
+        library: [],
+
+        config: function(o) {
+            kotori.library = o;
+        },
+
+        loadScript: function(url, callback) {
+            var scriptId = kotori.hashCode(url);
+            if (!document.getElementById(scriptId)) {
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.id = scriptId;
+
+                if (script.readyState) { // IE
+                    script.onreadystatechange = function() {
+                        if (script.readyState == 'loaded' || script.readyState == 'complete') {
+                            script.onreadystatechange = null;
+                            callback();
+                        }
+                    };
+                } else { // Others
+                    script.onload = function() {
+                        callback();
+                    };
+                }
+                script.src = url;
+                document.getElementsByTagName('head')[0].appendChild(script);
+            } else {
+                callback();
             }
-            if (obj.async === true) {
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState == 4) {
-                        this.callBack(xhr, obj);
+        },
+
+        loadStyle: function(url, callback) {
+            var cssId = kotori.hashCode(url);
+            if (!document.getElementById(cssId)) {
+                var head = document.getElementsByTagName('head')[0];
+                var link = document.createElement('link');
+                link.id = cssId;
+                link.rel = 'stylesheet';
+                link.type = 'text/css';
+                link.href = url;
+                link.media = 'all';
+                head.appendChild(link);
+            }
+            callback();
+        },
+
+        require: function(name, callback) {
+
+            if (typeof name == 'object') {
+                var cmd = '',
+                    length = name.length,
+                    url = null;
+                for (key in name) {
+                    if (typeof kotori.library[name[key]] == 'undefined') {
+                        url = name[key];
+                    } else {
+                        url = kotori.library[name[key]];
+                    }
+                    switch (url.substr(url.length - 3, 3)) {
+                        case 'css':
+                            cmd += 'kotori.loadStyle(';
+                            break;
+                        case '.js':
+                            cmd += 'kotori.loadScript(';
+                            break;
+                        default:
+                            throw new Error('Load error');
+                    }
+
+                    cmd += '\'' + url + '\'' + ',function(){';
+                    if (key == (length - 1)) {
+                        cmd += '!' + callback.toString() + '();';
                     }
                 }
-            }
-            xhr.open(obj.method, obj.url, obj.async);
-            if (obj.method === "post") {
-                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.send(obj.data);
-            } else {
-                xhr.send(null);
-            }
-
-            if (obj.async === false) {
-                this.callBack(xhr, obj);
-            }
-        },
-        callBack: function(xhr, obj) {
-            if (xhr.status == 200) {
-                obj.success(xhr.responseText);
-            } else {
-                obj.Error("获取数据失败，错误代号为：" + xhr.status + "错误信息为：" + xhr.statusText);
-            }
-        },
-        createXHR: function() {
-            if (typeof XMLHttpRequest != "undefined") {
-                return new XMLHttpRequest();
-            } else if (typeof ActiveXObject != "undefined") {
-                var version = [
-                    "MSXML2.XMLHttp.6.0",
-                    "MSXML2.XMLHttp.3.0",
-                    "MSXML2.XMLHttp",
-                ];
-                for (var i = 0; i < version.length; i++) {
-                    try {
-                        return new ActiveXObject(version[i]);
-                    } catch (e) {}
+                for (key in name) {
+                    cmd += '});'
                 }
-            } else {
-                throw new Error("您的系统或浏览器不支持XHR对象！");
+                eval(cmd);
+                return false;
+            }
+
+            eval('kotori.require([' + '\'' + name + '\'' + '],' + callback.toString() + ')');
+        },
+
+        page: function(name, callback) {
+            var page = document.getElementsByTagName('body')[0].getAttribute('data-page');
+            if (page == null) {
+                return false;
+            }
+            for (key in name) {
+                if (name[key] == page) {
+                    callback();
+                }
             }
         },
 
-        params: function(data) {
-            var arr = [];
-            for (var i in data) {
-                arr.push(encodeURIComponent(i) + "=" + encodeURIComponent(data[i]));
+        hashCode: function(s) {
+            var hash = 0,
+                i, chr, len;
+            if (s.length === 0) return hash;
+            for (i = 0, len = s.length; i < len; i++) {
+                chr = s.charCodeAt(i);
+                hash = ((hash << 5) - hash) + chr;
+                hash |= 0; // Convert to 32bit integer
             }
-            return arr.join("&");
+            return hash;
         }
 
     }
 
+    if (typeof define === "function" && define.amd) {
+        define('kotori', [], function() {
+            return kotori;
+        });
+    };
+
     if (typeof window === "object" && typeof window.document === "object") {
-        window.Kotori = window.$ = Kotori;
+        window.kotori = kotori;
     }
 
 })(window);
